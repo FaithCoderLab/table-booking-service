@@ -54,4 +54,10 @@ public class Store {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
 }

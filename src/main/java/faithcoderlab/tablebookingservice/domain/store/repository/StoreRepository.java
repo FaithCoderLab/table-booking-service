@@ -2,6 +2,8 @@ package faithcoderlab.tablebookingservice.domain.store.repository;
 
 import faithcoderlab.tablebookingservice.domain.store.entity.Store;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,4 +37,9 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
      * @return 매장 목록
      */
     List<Store> findByPartnerId(Long partnerId);
+
+    List<Store> findAllByActiveOrderByNameAsc(boolean active);
+
+    // TODO: rating에 따른 정렬
+    List<Store> findAllByActive(boolean active);
 }

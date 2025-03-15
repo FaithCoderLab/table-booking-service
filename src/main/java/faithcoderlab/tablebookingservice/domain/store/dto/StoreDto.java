@@ -31,6 +31,9 @@ public class StoreDto {
         private String description;
         private String phoneNumber;
         private String businessHours;
+
+        private Double latitude;
+        private Double longitude;
     }
 
     /**
@@ -49,6 +52,9 @@ public class StoreDto {
         private String businessHours;
         private Long partnerId;
         private LocalDateTime createdAt;
+
+        private Double latitude;
+        private Double longitude;
     }
 
     /**
@@ -69,6 +75,9 @@ public class StoreDto {
         private String partnerName;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+
+        private Double latitude;
+        private Double longitude;
     }
 
     /**
@@ -88,6 +97,9 @@ public class StoreDto {
         private String description;
         private String phoneNumber;
         private String businessHours;
+
+        private Double latitude;
+        private Double longitude;
     }
 
     /**
@@ -106,5 +118,8 @@ public class StoreDto {
         private String businessHours;
         private Long partnerId;
         private LocalDateTime updatedAt;
+
+        private Double latitude;
+        private Double longitude;
     }
 }

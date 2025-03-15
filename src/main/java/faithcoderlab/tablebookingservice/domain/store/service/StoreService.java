@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -177,5 +178,49 @@ public class StoreService {
                 .createdAt(store.getCreatedAt())
                 .updatedAt(store.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 매장 목록 조회 메서드 (정렬 기준 적용)
+     *
+     * @param sortBy 정렬 기준 (name, distance)
+     * @param lat    사용자 위치 위도 (거리순 정렬 시 필요)
+     * @param lng    사용자 위치 경도 (거리순 정렬 시 필요)
+     * @return 정렬된 매장 목록
+     */
+
+    @Transactional(readOnly = true)
+    public List<StoreDto.StoreInfoResponse> getAllStores(String sortBy, Double lat, Double lng) {
+        List<Store> stores;
+
+        if ("distance".equals(sortBy) && lat != null && lng != null) {
+            stores = storeRepository.findAllByActive(true);
+            stores.sort(Comparator.comparingDouble(store ->
+                    calculateDistance(lat, lng, store.getLatitude(), store.getLongitude())));
+        } else {
+            stores = storeRepository.findAllByActiveOrderByNameAsc(true);
+        }
+
+        return stores.stream()
+                .map(this::convertToStoreInfoResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 두 지점 간의 거리 계산 (Haversine 공식)
+     */
+    private double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+        final int R = 6371;
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lngDistance = Math.toRadians(lng2 - lng1);
+
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lngDistance / 2) * Math.sin(lngDistance / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
     }
 }

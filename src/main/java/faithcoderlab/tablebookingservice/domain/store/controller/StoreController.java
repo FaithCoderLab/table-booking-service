@@ -120,4 +120,23 @@ public class StoreController {
 
         return ResponseEntity.ok(ApiResponse.success("매장이 성공적으로 삭제되었습니다.", null));
     }
+
+    /**
+     * 매장 목록 조회 API (정렬 기준 적용)
+     *
+     * @param sortBy 정렬 기준 (name, distance)
+     * @param lat    사용자 위치 위도 (거리순 정렬 시 필요)
+     * @param lng    사용자 위치 경도 (거리순 정렬 시 필요)
+     * @return 정렬된 매장 목록 응답
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<StoreDto.StoreInfoResponse>>> getAllStores(
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
+    ) {
+        List<StoreDto.StoreInfoResponse> response = storeService.getAllStores(sortBy, lat, lng);
+
+        return ResponseEntity.ok(ApiResponse.success("매장 목록을 성공적으로 조회했습니다.", response));
+    }
 }
