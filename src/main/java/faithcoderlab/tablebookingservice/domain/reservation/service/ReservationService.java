@@ -376,4 +376,18 @@ public class ReservationService {
                 .updatedAt(reservation.getUpdatedAt())
                 .build();
     }
+
+    /**
+     * 예약 상세 정보 조회 메서드
+     *
+     * @param reservationId 예약 ID
+     * @return 예약 상세 정보
+     */
+    @Transactional(readOnly = true)
+    public ReservationDto.ReservationInfoResponse getReservationDetail(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        return converToReservationInfoResponse(reservation);
+    }
 }

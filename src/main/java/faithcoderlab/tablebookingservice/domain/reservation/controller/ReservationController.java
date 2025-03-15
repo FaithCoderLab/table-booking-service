@@ -2,7 +2,11 @@ package faithcoderlab.tablebookingservice.domain.reservation.controller;
 
 import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationDto;
 import faithcoderlab.tablebookingservice.domain.reservation.service.ReservationService;
+import faithcoderlab.tablebookingservice.domain.store.entity.Store;
+import faithcoderlab.tablebookingservice.domain.store.repository.StoreRepository;
 import faithcoderlab.tablebookingservice.global.common.ApiResponse;
+import faithcoderlab.tablebookingservice.global.exception.CustomException;
+import faithcoderlab.tablebookingservice.global.exception.ErrorCode;
 import faithcoderlab.tablebookingservice.global.security.AuthenticationUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +14,12 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -26,6 +33,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final AuthenticationUtil authenticationUtil;
+    private final StoreRepository storeRepository;
 
     /**
      * 예약 가능 시간 조회 API
@@ -105,5 +113,43 @@ public class ReservationController {
                 reservationService.getPartnerReservations(partnerId, storeId, date, status);
 
         return ResponseEntity.ok(ApiResponse.success("매장 예약 목록을 성공적으로 조회했습니다.", reservations));
+    }
+
+    /**
+     * 예약 상세 정보 조회 API
+     * 특정 예약의 상세 정보를 조회
+     *
+     * @param reservationId 예약 ID
+     * @return 예약 상세 정보 응답
+     */
+    @GetMapping("/{reservationId}")
+    public ResponseEntity<ApiResponse<ReservationDto.ReservationInfoResponse>> getReservationDetail(
+            @PathVariable Long reservationId
+    ) {
+        ReservationDto.ReservationInfoResponse reservation = reservationService.getReservationDetail(reservationId);
+
+        String currentUserEmail = authenticationUtil.getCurrentUserEmail();
+        Long currentUserId = authenticationUtil.getCurrentUserId();
+
+        boolean isReservationOwner = reservation.getUserId().equals(currentUserId);
+        boolean isStorePartner = false;
+
+        Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
+                .getAuthentication().getAuthorities();
+        boolean isPartner = authorities.stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_PARTNER"));
+
+        if (isPartner) {
+            Store store = storeRepository.findById(reservation.getStoreId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+            isStorePartner = store.getPartner().getEmail().equals(currentUserEmail);
+        }
+
+        if (!isReservationOwner && !isStorePartner) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("예약 상세 정보를 성공적으로 조회했습니다.", reservation));
+
     }
 }
