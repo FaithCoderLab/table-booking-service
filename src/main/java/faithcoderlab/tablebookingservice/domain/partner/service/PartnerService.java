@@ -68,4 +68,76 @@ public class PartnerService {
                 .address(savedPartner.getAddress())
                 .role(savedPartner.getRole()).build();
     }
+
+    /**
+     * 파트너 정보 조회 메서드
+     *
+     * @param partnerId 파트너 ID
+     * @return 파트너 정보 응답 객체
+     */
+    @Transactional(readOnly = true)
+    public PartnerDto.PartnerInfoResponse getPartnerInfo(Long partnerId) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new CustomException((ErrorCode.USER_NOT_FOUND)));
+
+        return convertToPartnerInfoResponse(partner);
+    }
+
+    /**
+     * 파트너 정보 수정 메서드
+     *
+     * @param partnerId 파트너 ID
+     * @param request 수정 요청 정보
+     * @return 수정된 파트너 정보 응답 객체
+     */
+    @Transactional
+    public PartnerDto.UpdateResponse updatePartnerInfo(Long partnerId, PartnerDto.UpdateRequest request) {
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new CustomException((ErrorCode.USER_NOT_FOUND)));
+
+        if (!partner.getPhone().equals(request.getPhone()) &&
+                (partnerRepository.existsByPhone(request.getPhone()) || userRepository.existsByPhone(request.getPhone()))) {
+            throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
+        }
+
+        partner.setName(request.getName());
+        partner.setPhone(request.getPhone());
+        partner.setBusinessName(request.getBusinessName());
+        partner.setAddress(request.getAddress());
+
+        Partner updatedPartner = partnerRepository.save(partner);
+
+        return PartnerDto.UpdateResponse.builder()
+                .partnerId(updatedPartner.getId())
+                .email(updatedPartner.getEmail())
+                .name(updatedPartner.getName())
+                .phone(updatedPartner.getPhone())
+                .businessNumber(updatedPartner.getBusinessNumber())
+                .businessName(updatedPartner.getBusinessName())
+                .address(updatedPartner.getAddress())
+                .role(updatedPartner.getRole())
+                .updatedAt(updatedPartner.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * Partner 엔티티를 PartnerInfoResponse DTO로 변환
+     *
+     * @param partner Partner 엔티티
+     * @return PartnerInfoResponse DTO
+     */
+    private PartnerDto.PartnerInfoResponse convertToPartnerInfoResponse(Partner partner) {
+        return PartnerDto.PartnerInfoResponse.builder()
+                .partnerId(partner.getId())
+                .email(partner.getEmail())
+                .name(partner.getName())
+                .phone(partner.getPhone())
+                .businessNumber(partner.getBusinessNumber())
+                .businessName(partner.getBusinessName())
+                .address(partner.getAddress())
+                .role(partner.getRole())
+                .createdAt(partner.getCreatedAt())
+                .updatedAt(partner.getUpdatedAt())
+                .build();
+    }
 }

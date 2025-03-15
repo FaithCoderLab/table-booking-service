@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 일반 사용자 DTO 클래스
  * 회원가입 요청 정보를 담는 DTO
@@ -54,5 +56,54 @@ public class UserDto {
         private String name;
         private String phone;
         private UserRole role;
+    }
+
+    /**
+     * 사용자 정보 응답 DTO
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UserInfoResponse {
+        private Long userId;
+        private String email;
+        private String name;
+        private String phone;
+        private UserRole role;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+    }
+
+    /**
+     * 사용자 정보 수정 요청 DTO
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateRequest {
+        @NotBlank(message = "이름은 필수 입력 항목입니다.")
+        private String name;
+
+        @NotBlank(message = "전화번호는 필수 입력 항목입니다.")
+        @Pattern(regexp = "^\\d{10,11}$", message = "전화번호는 10-11자리의 숫자로만 이루어져야 합니다.")
+        private String phone;
+    }
+
+    /**
+     * 사용자 정보 수정 응답 DTO
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateResponse {
+        private Long userId;
+        private String email;
+        private String name;
+        private String phone;
+        private UserRole role;
+        private LocalDateTime updatedAt;
     }
 }

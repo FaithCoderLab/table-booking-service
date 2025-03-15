@@ -57,4 +57,67 @@ public class UserService {
                 .role(savedUser.getRole())
                 .build();
     }
+
+    /**
+     * 사용자 정보 조회 메서드
+     *
+     * @param userId 사용자 ID
+     * @return 사용자 정보 응답 객체
+     */
+    @Transactional(readOnly = true)
+    public UserDto.UserInfoResponse getUserInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        return convertToUserInfoResponse(user);
+    }
+
+    /**
+     * 사용자 정보 수정 메서드
+     *
+     * @param userId 사용자 ID
+     * @param request 수정 요청 정보
+     * @return 수정된 사용자 정보 응답 객체
+     */
+    @Transactional
+    public UserDto.UpdateResponse updateUserInfo(Long userId, UserDto.UpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (!user.getPhone().equals(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
+            throw new CustomException(ErrorCode.PHONE_ALREADY_EXISTS);
+        }
+
+        user.setName(request.getName());
+        user.setPhone(request.getPhone());
+
+        User updatedUser = userRepository.save(user);
+
+        return UserDto.UpdateResponse.builder()
+                .userId(updatedUser.getId())
+                .email(updatedUser.getEmail())
+                .name(updatedUser.getName())
+                .phone(updatedUser.getPhone())
+                .role(updatedUser.getRole())
+                .updatedAt(updatedUser.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * User 엔티티를 UserInfoRespones DTO로 변환
+     *
+     * @param user User 엔티티
+     * @return UserInfoResponse DTO
+     */
+    private UserDto.UserInfoResponse convertToUserInfoResponse(User user) {
+        return UserDto.UserInfoResponse.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .phone(user.getPhone())
+                .role(user.getRole())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .build();
+    }
 }
