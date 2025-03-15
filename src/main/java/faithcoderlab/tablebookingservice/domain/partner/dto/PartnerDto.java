@@ -1,4 +1,4 @@
-package faithcoderlab.tablebookingservice.domain.user.dto;
+package faithcoderlab.tablebookingservice.domain.partner.dto;
 
 import faithcoderlab.tablebookingservice.domain.UserRole;
 import jakarta.validation.constraints.Email;
@@ -11,13 +11,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 일반 사용자 DTO 클래스
- * 회원가입 요청 정보를 담는 DTO
+ * 파트너(점장) DTO 클래스
+ * 파트너 회원가입 요청 정보를 담는 DTO
  */
-public class UserDto {
+public class PartnerDto {
 
     /**
-     * 회원가입 요청 DTO
+     * 파트너 회원가입 요청 DTO
      */
     @Data
     @Builder
@@ -39,20 +39,30 @@ public class UserDto {
         @NotBlank(message = "전화번호는 필수 입력 항목입니다.")
         @Pattern(regexp = "^\\d{10,11}$", message = "전화번호는 10-11자리의 숫자로만 이루어져야 합니다.")
         private String phone;
+
+        @NotBlank(message = "사업자등록번호는 필수 입력 항목입니다.")
+        @Pattern(regexp = "^\\d{10}$", message = "사업자등록번호는 10자리의 숫자로만 이루어져야 합니다.")
+        private String businessNumber;
+
+        private String businessName;
+        private String address;
     }
 
     /**
-     * 회원가입 응답 DTO
+     * 파트너 회원가입 응답 DTO
      */
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SignUpResponse {
-        private Long userId;
+        private Long partnerId;
         private String email;
         private String name;
         private String phone;
+        private String businessNumber;
+        private String businessName;
+        private String address;
         private UserRole role;
     }
 }

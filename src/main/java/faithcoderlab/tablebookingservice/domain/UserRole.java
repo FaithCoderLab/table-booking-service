@@ -1,4 +1,4 @@
-package faithcoderlab.tablebookingservice.domain.user.entity;
+package faithcoderlab.tablebookingservice.domain;
 
 public enum UserRole {
     ROLE_USER,

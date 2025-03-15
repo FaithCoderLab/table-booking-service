@@ -1,4 +1,4 @@
-package faithcoderlab.tablebookingservice.domain.user.entity;
+package faithcoderlab.tablebookingservice.domain.partner.entity;
 
 import faithcoderlab.tablebookingservice.domain.UserRole;
 import jakarta.persistence.*;
@@ -12,16 +12,16 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * 일반 사용자 엔티티 클래스
- * 매장을 이용하는 사용자 정보를 저장하는 엔티티
+ * 파트너(점장) 엔티티 클래스
+ * 매장을 관리하는 파트너(점장) 정보를 저장하는 엔티티
  */
 @Entity
-@Table(name = "users")
+@Table(name = "partners")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Partner {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,6 +38,15 @@ public class User {
 
     @Column(nullable = false)
     private String phone;
+
+    @Column(nullable = false)
+    private String businessNumber;
+
+    @Column
+    private String businessName;
+
+    @Column
+    private String address;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

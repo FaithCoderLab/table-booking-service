@@ -2,7 +2,7 @@ package faithcoderlab.tablebookingservice.domain.user.service;
 
 import faithcoderlab.tablebookingservice.domain.user.dto.UserDto;
 import faithcoderlab.tablebookingservice.domain.user.entity.User;
-import faithcoderlab.tablebookingservice.domain.user.entity.UserRole;
+import faithcoderlab.tablebookingservice.domain.UserRole;
 import faithcoderlab.tablebookingservice.domain.user.repository.UserRepository;
 import faithcoderlab.tablebookingservice.global.exception.CustomException;
 import faithcoderlab.tablebookingservice.global.exception.ErrorCode;
