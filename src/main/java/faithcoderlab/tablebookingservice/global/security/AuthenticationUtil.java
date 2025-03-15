@@ -1,5 +1,7 @@
 package faithcoderlab.tablebookingservice.global.security;
 
+import faithcoderlab.tablebookingservice.domain.partner.entity.Partner;
+import faithcoderlab.tablebookingservice.domain.partner.repository.PartnerRepository;
 import faithcoderlab.tablebookingservice.global.exception.CustomException;
 import faithcoderlab.tablebookingservice.global.exception.ErrorCode;
 import org.springframework.security.core.Authentication;
@@ -12,6 +14,12 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class AuthenticationUtil {
+
+    private final PartnerRepository partnerRepository;
+
+    public AuthenticationUtil(PartnerRepository partnerRepository) {
+        this.partnerRepository = partnerRepository;
+    }
 
     /**
      * 현재 인증된 사용자의 이메일 반환
@@ -36,6 +44,22 @@ public class AuthenticationUtil {
     public void validateOwnership(Long id, String email) {
         String currentUserEmail = getCurrentUserEmail();
         if (!currentUserEmail.equals(email)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    /**
+     * 현재 인증된 사용자가 해당 파트너인지 확인
+     *
+     * @param partnerId 파트너 ID
+     */
+    public void validatePartnerOwnership(Long partnerId) {
+        String currentUserEmail = getCurrentUserEmail();
+
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (!currentUserEmail.equals(partner.getEmail())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
     }
