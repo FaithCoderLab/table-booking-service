@@ -150,6 +150,30 @@ public class ReservationController {
         }
 
         return ResponseEntity.ok(ApiResponse.success("예약 상세 정보를 성공적으로 조회했습니다.", reservation));
+    }
 
+    /**
+     * 예약 취소 API
+     * 사용자 또는 파트너(점장)가 예약을 취소
+     *
+     * @param reservationId 예약 ID
+     * @return 취소된 예약 정보 응답
+     */
+    @PatchMapping("/{reservationId}/cancel")
+    public ResponseEntity<ApiResponse<ReservationDto.ReservationInfoResponse>> cancelReservation(
+            @PathVariable Long reservationId
+    ) {
+        String currentUserEmail = authenticationUtil.getCurrentUserEmail();
+        Long currentUserId = authenticationUtil.getCurrentUserId();
+
+        Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
+                .getAuthentication().getAuthorities();
+        boolean isPartner = authorities.stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_PARTNER"));
+
+        ReservationDto.ReservationInfoResponse response =
+                reservationService.cancelReservation(reservationId, currentUserId, isPartner);
+
+        return ResponseEntity.ok(ApiResponse.success("예약이 성공적으로 취소되었습니다.", response));
     }
 }

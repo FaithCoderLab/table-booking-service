@@ -101,7 +101,7 @@ public class ReservationService {
     /**
      * 예약 생성 메서드
      *
-     * @param userId 사용자 ID
+     * @param userId  사용자 ID
      * @param request 예약 생성 요청 정보
      * @return 생성된 예약 정보
      */
@@ -152,8 +152,8 @@ public class ReservationService {
      * 예약 시간 가용성 검증 메서드
      *
      * @param storeId 매장 ID
-     * @param date 예약 날짜
-     * @param time 예약 시간
+     * @param date    예약 날짜
+     * @param time    예약 시간
      */
     private void checkTimeAvailability(Long storeId, LocalDate date, LocalTime time) {
         List<ReservationStatus> activeStatuses = Arrays.asList(
@@ -389,5 +389,54 @@ public class ReservationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         return converToReservationInfoResponse(reservation);
+    }
+
+    /**
+     * 예약 취소 메서드
+     *
+     * @param reservationId 예약 ID
+     * @param actorId       액터 ID (사용자 또는 파트너)
+     * @param isPartner     파트너 여부
+     * @return 취소된 예약 정보
+     */
+    @Transactional
+    public ReservationDto.ReservationInfoResponse cancelReservation(Long reservationId, Long actorId, boolean isPartner) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        validateCancellationPermission(reservation, actorId, isPartner);
+
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "이미 취소된 예약입니다.");
+        }
+
+        if (reservation.getStatus() == ReservationStatus.ARRIVED ||
+                reservation.getStatus() == ReservationStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.RESERVATION_NOT_ALLOWED, "이미 방문 확인되었거나 완료된 예약은 취소할 수 없습니다.");
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        Reservation cancelledReservation = reservationRepository.save(reservation);
+
+        return converToReservationInfoResponse(cancelledReservation);
+    }
+
+    /**
+     * 예약 취소 권한 검증 메서드
+     *
+     * @param reservation 예약 객체
+     * @param actorId 액터 ID (사용자 또는 파트너)
+     * @param isPartner 파트너 여부
+     */
+    private void validateCancellationPermission(Reservation reservation, Long actorId, boolean isPartner) {
+        if (isPartner) {
+            if (!reservation.getStore().getPartner().getId().equals(actorId)) {
+                throw new CustomException(ErrorCode.FORBIDDEN, "해당 매장의 예약을 취소할 권한이 없습니다.");
+            }
+        } else {
+            if (!reservation.getUser().getId().equals(actorId)) {
+                throw new CustomException(ErrorCode.FORBIDDEN, "본인의 예약만 취소할 수 있습니다.");
+            }
+        }
     }
 }
