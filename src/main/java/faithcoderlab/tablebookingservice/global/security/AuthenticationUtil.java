@@ -2,11 +2,15 @@ package faithcoderlab.tablebookingservice.global.security;
 
 import faithcoderlab.tablebookingservice.domain.partner.entity.Partner;
 import faithcoderlab.tablebookingservice.domain.partner.repository.PartnerRepository;
+import faithcoderlab.tablebookingservice.domain.user.repository.UserRepository;
 import faithcoderlab.tablebookingservice.global.exception.CustomException;
 import faithcoderlab.tablebookingservice.global.exception.ErrorCode;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+
+import java.util.Collection;
 
 /**
  * 인증 유틸리티 클래스
@@ -16,9 +20,11 @@ import org.springframework.stereotype.Component;
 public class AuthenticationUtil {
 
     private final PartnerRepository partnerRepository;
+    private final UserRepository userRepository;
 
-    public AuthenticationUtil(PartnerRepository partnerRepository) {
+    public AuthenticationUtil(PartnerRepository partnerRepository, UserRepository userRepository) {
         this.partnerRepository = partnerRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -61,6 +67,25 @@ public class AuthenticationUtil {
 
         if (!currentUserEmail.equals(partner.getEmail())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    public Long getCurrentUserId() {
+        String email = getCurrentUserEmail();
+        Collection<? extends GrantedAuthority> authorities = SecurityContextHolder.getContext()
+                .getAuthentication().getAuthorities();
+
+        boolean isPartner = authorities.stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_PARTNER"));
+
+        if (isPartner) {
+            return partnerRepository.findByEmail(email)
+                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND))
+                    .getId();
+        } else {
+            return userRepository.findByEmail(email)
+                    .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND))
+                    .getId();
         }
     }
 }
