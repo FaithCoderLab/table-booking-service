@@ -1,5 +1,6 @@
 package faithcoderlab.tablebookingservice.domain.reservation.service;
 
+import faithcoderlab.tablebookingservice.domain.partner.repository.PartnerRepository;
 import faithcoderlab.tablebookingservice.domain.reservation.config.ReservationConfig;
 import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationDto;
 import faithcoderlab.tablebookingservice.domain.reservation.entity.Reservation;
@@ -17,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +36,7 @@ public class ReservationService {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final ReservationConfig reservationConfig;
+    private final PartnerRepository partnerRepository;
 
     /**
      * 예약 가능 시간 조회 메서드
@@ -212,5 +216,164 @@ public class ReservationService {
                     String.format("예약은 %d분 단위로만 가능합니다.", reservationConfig.getIntervalMinutes())
             );
         }
+    }
+
+    /**
+     * 사용자별 예약 목록 조회 메서드
+     *
+     * @param userId     사용자 ID
+     * @param statusList 조회할 상태 목록 (선택적)
+     * @return 사용자의 예약 목록
+     */
+    @Transactional(readOnly = true)
+    public List<ReservationDto.ReservationInfoResponse> getUserReservations(Long userId, List<String> statusList) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        List<ReservationStatus> statuses = getReservationStatuses(statusList);
+
+        List<Reservation> reservations;
+        if (statuses.isEmpty()) {
+            reservations = reservationRepository.findByUserIdOrderByReservationDateDescReservationTimeDesc(userId);
+        } else {
+            reservations = reservationRepository.findByUserIdAndStatusInOrderByReservationDateDescReservationTimeDesc(
+                    userId, statuses
+            );
+        }
+
+        return reservations.stream()
+                .map(this::converToReservationInfoResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 파트너별 매장 예약 목록 조회 메서드
+     *
+     * @param partnerId  파트너 ID
+     * @param storeId    매장 ID (선택적)
+     * @param date       예약 날짜 (선택적)
+     * @param statusList 조회할 상태 목록 (선택적)
+     * @return 매장 예약 목록
+     */
+    @Transactional(readOnly = true)
+    public List<ReservationDto.ReservationInfoResponse> getPartnerReservations(
+            Long partnerId, Long storeId, LocalDate date, List<String> statusList
+    ) {
+        if (!partnerRepository.existsById(partnerId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        List<ReservationStatus> statuses = getReservationStatuses(statusList);
+        List<Reservation> reservations;
+
+        if (storeId != null) {
+            Store store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+            if (!store.getPartner().getId().equals(partnerId)) {
+                throw new CustomException(ErrorCode.FORBIDDEN, "해당 매장에 대한 접근 권한이 없습니다.");
+            }
+
+            if (date != null) {
+                if (statuses.isEmpty()) {
+                    reservations = reservationRepository.findByStoreIdAndReservationDateOrderByReservationTime(
+                            storeId, date
+                    );
+                } else {
+                    reservations = reservationRepository.findByStoreIdAndReservationDateAndStatusInOrderByReservationTime(
+                            storeId, date, statuses
+                    );
+                }
+            } else {
+                if (statuses.isEmpty()) {
+                    reservations = reservationRepository.findByStoreIdOrderByReservationDateDescReservationTimeDesc(
+                            storeId
+                    );
+                } else {
+                    reservations = reservationRepository.findByStoreIdAndStatusInOrderByReservationDateDescReservationTimeDesc(
+                            storeId, statuses
+                    );
+                }
+            }
+        } else {
+            List<Long> storeIds = storeRepository.findByPartnerId(partnerId).stream()
+                    .map(Store::getId)
+                    .collect(Collectors.toList());
+
+            if (date != null) {
+                if (statuses.isEmpty()) {
+                    reservations = reservationRepository.findByStoreIdInAndReservationDateOrderByStoreIdAscReservationTime(
+                            storeIds, date
+                    );
+                } else {
+                    reservations = reservationRepository.findByStoreIdInAndReservationDateAndStatusInOrderByStoreIdAscReservationTime(
+                            storeIds, date, statuses
+                    );
+                }
+            } else {
+                if (statuses.isEmpty()) {
+                    reservations = reservationRepository.findByStoreIdInOrderByReservationDateDescReservationTimeDesc(
+                            storeIds
+                    );
+                } else {
+                    reservations = reservationRepository.findByStoreIdInAndStatusInOrderByReservationDateDescReservationTimeDesc(
+                            storeIds, statuses
+                    );
+                }
+            }
+        }
+
+        return reservations.stream()
+                .map(this::converToReservationInfoResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 문자열 상태 목록을 ReservationStatus 열거형 목록으로 변환
+     *
+     * @param statusList 문자열 상태 목록
+     * @return ReservationStatus 목록
+     */
+    private List<ReservationStatus> getReservationStatuses(List<String> statusList) {
+        if (statusList == null || statusList.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return statusList.stream()
+                .map(status -> {
+                    try {
+                        return ReservationStatus.valueOf(status.toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        throw new CustomException(ErrorCode.INVALID_REQUEST, "유효하지 않은 예약 상태: " + status);
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Reservation 엔티티를 ReservationInfoResponse DTO로 변환
+     *
+     * @param reservation Reservation 엔티티
+     * @return ReservationInfoResponse DTO
+     */
+    private ReservationDto.ReservationInfoResponse converToReservationInfoResponse(Reservation reservation) {
+        return ReservationDto.ReservationInfoResponse.builder()
+                .reservationId(reservation.getId())
+                .storeId(reservation.getStore().getId())
+                .storeName(reservation.getStore().getName())
+                .userId(reservation.getUser().getId())
+                .userName(reservation.getUser().getName())
+                .userPhone(reservation.getUser().getPhone())
+                .reservationDate(reservation.getReservationDate())
+                .reservationTime(reservation.getReservationTime())
+                .partySize(reservation.getPartySize())
+                .status(reservation.getStatus())
+                .arrivedAt(reservation.getArrivedAt())
+                .completedAt(reservation.getCompletedAt())
+                .specialRequests(reservation.getSpecialRequests())
+                .createdAt(reservation.getCreatedAt())
+                .updatedAt(reservation.getUpdatedAt())
+                .build();
     }
 }

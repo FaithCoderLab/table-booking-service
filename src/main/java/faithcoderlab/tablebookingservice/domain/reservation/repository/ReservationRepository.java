@@ -59,5 +59,54 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             Long userId, List<ReservationStatus> statuses
     );
 
+    /**
+     * 사용자 ID로 예약 목록 조회 (최신순 정렬)
+     */
+    List<Reservation> findByUserIdOrderByReservationDateDescReservationTimeDesc(Long userId);
 
+    /**
+     * 매장 ID와 예약 날짜로 예약 목록 조회 (시간순 정렬)
+     */
+    List<Reservation> findByStoreIdAndReservationDateOrderByReservationTime(
+            Long storeId, LocalDate date);
+
+    /**
+     * 매장 ID와 예약 날짜 및 상태 목록으로 예약 목록 조회 (시간순 정렬)
+     */
+    List<Reservation> findByStoreIdAndReservationDateAndStatusInOrderByReservationTime(
+            Long storeId, LocalDate date, List<ReservationStatus> statuses);
+
+    /**
+     * 매장 ID로 예약 목록 조회 (최신순 정렬)
+     */
+    List<Reservation> findByStoreIdOrderByReservationDateDescReservationTimeDesc(Long storeId);
+
+    /**
+     * 매장 ID와 상태 목록으로 예약 목록 조회 (최신순 정렬)
+     */
+    List<Reservation> findByStoreIdAndStatusInOrderByReservationDateDescReservationTimeDesc(
+            Long storeId, List<ReservationStatus> statuses);
+
+    /**
+     * 매장 ID 목록과 예약 날짜로 예약 목록 조회 (매장순, 시간순 정렬)
+     */
+    List<Reservation> findByStoreIdInAndReservationDateOrderByStoreIdAscReservationTime(
+            List<Long> storeIds, LocalDate date);
+
+    /**
+     * 매장 ID 목록과 예약 날짜 및 상태 목록으로 예약 목록 조회 (매장순, 시간순 정렬)
+     */
+    List<Reservation> findByStoreIdInAndReservationDateAndStatusInOrderByStoreIdAscReservationTime(
+            List<Long> storeIds, LocalDate date, List<ReservationStatus> statuses);
+
+    /**
+     * 매장 ID 목록으로 예약 목록 조회 (최신순 정렬)
+     */
+    List<Reservation> findByStoreIdInOrderByReservationDateDescReservationTimeDesc(List<Long> storeIds);
+
+    /**
+     * 매장 ID 목록과 상태 목록으로 예약 목록 조회 (최신순 정렬)
+     */
+    List<Reservation> findByStoreIdInAndStatusInOrderByReservationDateDescReservationTimeDesc(
+            List<Long> storeIds, List<ReservationStatus> statuses);
 }
