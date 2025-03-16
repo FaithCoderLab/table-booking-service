@@ -1,5 +1,6 @@
 package faithcoderlab.tablebookingservice.domain.reservation.controller;
 
+import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationApprovalDto;
 import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationDto;
 import faithcoderlab.tablebookingservice.domain.reservation.service.ReservationService;
 import faithcoderlab.tablebookingservice.domain.store.entity.Store;
@@ -175,5 +176,33 @@ public class ReservationController {
                 reservationService.cancelReservation(reservationId, currentUserId, isPartner);
 
         return ResponseEntity.ok(ApiResponse.success("예약이 성공적으로 취소되었습니다.", response));
+    }
+
+    /**
+     * 예약 승인/거절 API (파트너 전용)
+     * 파트너가 예약 요청을 승인하거나 거절
+     *
+     * @param reservationId 예약 ID
+     * @param partnerId     파트너 ID
+     * @param request       승인/거절 요청 정보
+     * @return 승인/거절 처리 결과 응답
+     */
+    @PatchMapping("/{reservationId}/approval/partners/{partnerId}")
+    @PreAuthorize("hasRole('ROLE_PARTNER')")
+    public ResponseEntity<ApiResponse<ReservationApprovalDto.ApprovalResponse>> processReservationApproval(
+            @PathVariable Long reservationId,
+            @PathVariable Long partnerId,
+            @Valid @RequestBody ReservationApprovalDto.ApprovalRequest request
+    ) {
+        authenticationUtil.validatePartnerOwnership(partnerId);
+
+        ReservationApprovalDto.ApprovalResponse response =
+                reservationService.processReservationApproval(reservationId, partnerId, request);
+
+        String message = request.getApproved()
+                ? "예약이 성공적으로 승인되었습니다."
+                : "예약이 거절되었습니다.";
+
+        return ResponseEntity.ok(ApiResponse.success(message, response));
     }
 }

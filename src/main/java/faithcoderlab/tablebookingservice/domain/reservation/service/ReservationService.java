@@ -2,6 +2,7 @@ package faithcoderlab.tablebookingservice.domain.reservation.service;
 
 import faithcoderlab.tablebookingservice.domain.partner.repository.PartnerRepository;
 import faithcoderlab.tablebookingservice.domain.reservation.config.ReservationConfig;
+import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationApprovalDto;
 import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationDto;
 import faithcoderlab.tablebookingservice.domain.reservation.entity.Reservation;
 import faithcoderlab.tablebookingservice.domain.reservation.entity.ReservationStatus;
@@ -12,15 +13,16 @@ import faithcoderlab.tablebookingservice.domain.user.entity.User;
 import faithcoderlab.tablebookingservice.domain.user.repository.UserRepository;
 import faithcoderlab.tablebookingservice.global.exception.CustomException;
 import faithcoderlab.tablebookingservice.global.exception.ErrorCode;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -425,8 +427,8 @@ public class ReservationService {
      * 예약 취소 권한 검증 메서드
      *
      * @param reservation 예약 객체
-     * @param actorId 액터 ID (사용자 또는 파트너)
-     * @param isPartner 파트너 여부
+     * @param actorId     액터 ID (사용자 또는 파트너)
+     * @param isPartner   파트너 여부
      */
     private void validateCancellationPermission(Reservation reservation, Long actorId, boolean isPartner) {
         if (isPartner) {
@@ -439,4 +441,84 @@ public class ReservationService {
             }
         }
     }
+
+    /**
+     * 예약 완료 처리 메서드
+     * 파트너(점장)가 서비스 완료 후 예약 상태를 COMPLETED로 변경
+     *
+     * @param reservationId 예약 ID
+     * @param partnerId     파트너 ID
+     * @return 완료 처리된 예약 정보
+     */
+    @Transactional
+    public ReservationDto.ReservationInfoResponse completeReservation(Long reservationId, Long partnerId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        if (!reservation.getStore().getPartner().getId().equals(partnerId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "해당 매장의 예약을 처리할 권한이 없습니다.");
+        }
+
+        if (reservation.getStatus() != ReservationStatus.ARRIVED) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "도착 확인된 예약만 완료 처리할 수 있습니다.");
+        }
+
+        reservation.setStatus(ReservationStatus.COMPLETED);
+        reservation.setCompletedAt(LocalDateTime.now());
+
+        Reservation completedReservation = reservationRepository.save(reservation);
+
+        return converToReservationInfoResponse(completedReservation);
+    }
+
+    /**
+     * 예약 승인/거절 처리 메서드
+     * 파트너(점장)가 예약 요청을 승인하거나 거절
+     *
+     * @param reservationId 예약 ID
+     * @param partnerId     파트너 ID
+     * @param request       승인/거절 요청 정보
+     * @return 승인/거절 처리 결과
+     */
+    @Transactional
+    public ReservationApprovalDto.ApprovalResponse processReservationApproval(
+            Long reservationId, Long partnerId, ReservationApprovalDto.@Valid ApprovalRequest request
+    ) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        if (!reservation.getStore().getPartner().getId().equals(partnerId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN, "해당 매장의 예약을 처리할 권한이 없습니다.");
+        }
+
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "대기 중인 예약만 승인/거절할 수 있습니다.");
+        }
+
+        String message;
+
+        if (request.getApproved()) {
+            reservation.setStatus(ReservationStatus.CONFIRMED);
+            message = "예약이 승인되었습니다.";
+        } else {
+            reservation.setStatus(ReservationStatus.REJECTED);
+            message = "예약이 거절되었습니다.";
+
+            if (request.getRejectionReason() == null || request.getRejectionReason().trim().isEmpty()) {
+                request.setRejectionReason("매장 사정으로 인해 예약이 거절되었습니다.");
+            }
+        }
+
+        Reservation processedReservation = reservationRepository.save(reservation);
+
+        return ReservationApprovalDto.ApprovalResponse.builder()
+                .reservationId(processedReservation.getId())
+                .storeName(processedReservation.getStore().getName())
+                .userName(processedReservation.getUser().getName())
+                .approved(request.getApproved())
+                .message(message)
+                .rejectionReason(request.getApproved() ? null : request.getRejectionReason())
+                .build();
+    }
+
 }
