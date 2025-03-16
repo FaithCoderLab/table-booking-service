@@ -1,5 +1,6 @@
 package faithcoderlab.tablebookingservice.domain.reservation.service;
 
+import faithcoderlab.tablebookingservice.domain.notification.service.NotificationService;
 import faithcoderlab.tablebookingservice.domain.partner.repository.PartnerRepository;
 import faithcoderlab.tablebookingservice.domain.reservation.config.ReservationConfig;
 import faithcoderlab.tablebookingservice.domain.reservation.dto.ReservationApprovalDto;
@@ -39,6 +40,7 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final ReservationConfig reservationConfig;
     private final PartnerRepository partnerRepository;
+    private final NotificationService notificationService;
 
     /**
      * 예약 가능 시간 조회 메서드
@@ -510,6 +512,15 @@ public class ReservationService {
         }
 
         Reservation processedReservation = reservationRepository.save(reservation);
+
+        notificationService.createReservationStatusNotification(
+                processedReservation.getUser().getId(),
+                processedReservation.getId(),
+                processedReservation.getStore().getName(),
+                request.getApproved(),
+                message,
+                request.getRejectionReason()
+        );
 
         return ReservationApprovalDto.ApprovalResponse.builder()
                 .reservationId(processedReservation.getId())
