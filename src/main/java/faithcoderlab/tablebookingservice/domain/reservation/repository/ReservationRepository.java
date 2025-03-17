@@ -109,4 +109,29 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     List<Reservation> findByStoreIdInAndStatusInOrderByReservationDateDescReservationTimeDesc(
             List<Long> storeIds, List<ReservationStatus> statuses);
+
+    /**
+     * 매장 ID와 날짜 범위로 예약 목록 조회
+     *
+     * @param storeId   매장 ID
+     * @param startDate 시작 날짜
+     * @param endDate   종료 날짜
+     * @return 예약 목록
+     */
+    List<Reservation> findByStoreIdAndReservationDateBetween(
+            Long storeId, LocalDate startDate, LocalDate endDate
+    );
+
+    /**
+     * 매장 ID와 날짜 범위, 상태 목록으로 예약 목록 조회
+     *
+     * @param storeId   매장 ID
+     * @param startDate 시작 날짜
+     * @param endDate   종료 날짜
+     * @param statuses  예약 상태 목록
+     * @return 예약 목록
+     */
+    List<Reservation> findByStoreIdAndReservationDateBetweenAndStatusIn(
+            Long storeId, LocalDate startDate, LocalDate endDate, List<ReservationStatus> statuses
+    );
 }
